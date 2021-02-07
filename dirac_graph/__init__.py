@@ -41,8 +41,8 @@ class Clique:
 Return the cliques/simplices of a graph in a list, indexed by dimension.
 Each list entry is a list of Clique objects of the same dimension.
 """
-def cliques_by_dim(g):
-    cliques = g.as_undirected().cliques()
+def cliques_by_dim(g, max_dim=None):
+    cliques = g.as_undirected().cliques(max=max_dim if max_dim is not None else 0)
 
     def orient_clique(c):
         # orient 1-simplices/cliques according to edge direction (if available)
@@ -57,7 +57,7 @@ def cliques_by_dim(g):
     N = len(g.vs)
     sorted_cliques = sorted(oriented_cliques, key=lambda x:len(x)+sum(x)/(N*len(x)))
     clqs = Cliques(len(cliques))
-    for k,cs in groupby(sorted_cliques, key=len):
+    for _,cs in groupby(sorted_cliques, key=len):
         clqs.append([Clique(c) for c in cs])
     return clqs
 
