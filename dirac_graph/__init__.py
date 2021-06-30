@@ -8,6 +8,7 @@ Ref:
 from itertools import groupby
 import numpy as np
 
+
 def is_sublist(l,ll):
     Nl = len(l)
     for i in range(0, len(ll)-Nl):
@@ -15,12 +16,14 @@ def is_sublist(l,ll):
             return True
     return False
 
+
 class Cliques(list):
     def __init__(self, total_count):
         self.total_count = total_count
 
     def dim(self, i):
         return len(self[i])
+
 
 class Clique:
     def __init__(self, c):
@@ -37,11 +40,12 @@ class Clique:
         else:
             return 0
 
-"""
-Return the cliques/simplices of a graph in a list, indexed by dimension.
-Each list entry is a list of Clique objects of the same dimension.
-"""
+
 def cliques_by_dim(g, max_dim=None):
+    """
+    Return the cliques/simplices of a graph in a list, indexed by dimension.
+    Each list entry is a list of Clique objects of the same dimension.
+    """
     cliques = g.as_undirected().cliques(max=max_dim if max_dim is not None else 0)
 
     def orient_clique(c):
@@ -61,10 +65,11 @@ def cliques_by_dim(g, max_dim=None):
         clqs.append([Clique(c) for c in cs])
     return clqs
 
-"""
-Returns the Dirac matrix.
-"""
+
 def dirac(clqs):
+    """
+    Returns the Dirac matrix.
+    """
     N = len(clqs)
     Nd = clqs.total_count
     D = np.zeros((Nd,Nd), np.int8)
@@ -81,22 +86,25 @@ def dirac(clqs):
         i_offset += i_size
     return D
 
-"""
-Returns the exterior derivative.
-"""
+
 def exterior_d(D):
+    """
+    Returns the exterior derivative.
+    """
     return np.tril(D)
 
-"""
-Returns the adjoint of the exterior derivative.
-"""
+
 def adjoint_d(D):
+    """
+    Returns the adjoint of the exterior derivative.
+    """
     return np.triu(D)
 
-"""
-Returns the Z_2 grading.
-"""
+
 def gamma(clqs):
+    """
+    Returns the Z_2 grading.
+    """
     Nd = clqs.total_count
     g = np.zeros((Nd,Nd), np.int8)
     i_offset = 0
@@ -107,18 +115,31 @@ def gamma(clqs):
         i_offset += i_size
     return g
 
-"""
-Projects out \Omega_i from \Omega.
-"""
-def subspace(M, i, clqs):
-    offset = sum([clqs.dim(j) for j in range(i)])
-    N = clqs.dim(i)
-    return M[offset:offset+N, offset:offset+N] if len(M.shape)==2 else M[offset:offset+N]
 
-"""
-Embeds \Omega_i into \Omega.
-"""
+def subspace(T, i, clqs, j=None):
+    """
+    If T is a matrix,
+    projects out T_ij : \Omega_i -> \Omega_j from T : \Omega -> \Omega
+    (j = i by default).
+    Else, if T is a vector,
+    projects out T_i \in \Omega_i from T \in \Omega.
+    """
+    offset_i = sum([clqs.dim(k) for k in range(i)])
+    offset_j = sum([clqs.dim(k) for k in range(j)]) if j is not None else offset_i
+    N = clqs.dim(i)
+    M = clqs.dim(j) if j is not None else N
+    if len(T.shape) == 2:
+        return T[offset_i:offset_i+N, offset_j:offset_j+M]
+    elif j is None:
+        return T[offset_i:offset_i+N]
+    else:
+        raise Exception('Unsupported arguments')
+
+
 def dirac_space(v, i, clqs):
+    """
+    Embeds \Omega_i into \Omega.
+    """
     offset = sum([clqs.dim(j) for j in range(i)])
     N = clqs.dim(i)
     if len(v.shape)==2:
@@ -129,10 +150,11 @@ def dirac_space(v, i, clqs):
         u[offset:offset+N] = v
     return u
 
-"""
-Returns the cohomology groups.
-"""
+
 def cohomology_groups(Ls):
+    """
+    Returns the cohomology groups.
+    """
     def zero_eigenvectors(ev, evec):
         evec_zeros = []
         for i in range(len(ev)):
@@ -147,10 +169,15 @@ def cohomology_groups(Ls):
         groups.append(evec_zeros_i)
     return groups
 
+
 def remove_kernel(u, evec_zeros):
+    """
+    Removes the kernel subspace from the given vector.
+    """
     for evec_zero in evec_zeros:
         u -= np.dot(u, evec_zero)*evec_zero
     return u
+
 
 def get_vertex_values(u, clqs):
     N_0 = clqs.dim(0)
@@ -158,6 +185,7 @@ def get_vertex_values(u, clqs):
     for i,c in enumerate(clqs[0]):
         u_v[c.list[0]] = u[i]
     return u_v
+
 
 def get_edge_values(u, clqs, g):
     N_0 = clqs.dim(0)
@@ -167,6 +195,7 @@ def get_edge_values(u, clqs, g):
     for i,c in enumerate(clqs[1]):
         u_e[g.get_eid(c.list[0], c.list[1])] = u[i+offset]
     return u_e
+
 
 def get_2form_values(u, clqs):
     N_0 = clqs.dim(0)
