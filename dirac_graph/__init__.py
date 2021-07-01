@@ -170,6 +170,16 @@ def cohomology_groups(Ls):
     return groups
 
 
+def im_ker(d):
+    u,s,vh = np.linalg.svd(d, full_matrices=True)
+    rcond = np.finfo(s.dtype).eps * max(u.shape[0], vh.shape[1])
+    tol = np.amax(s) * rcond
+    offset = np.sum(s > tol, dtype=int)
+    im = u[:,:offset]
+    ker = vh[offset:,:].T.conj()
+    return im, ker
+
+
 def remove_kernel(u, evec_zeros):
     """
     Removes the kernel subspace from the given vector.
