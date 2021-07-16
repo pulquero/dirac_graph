@@ -26,17 +26,18 @@ class Cliques(list):
 
 
 class Clique:
-    def __init__(self, c):
+    def __init__(self, c, w=1):
         self.list = c
         # store set for use in inclusion()
         self.set = frozenset(c)
+        self.w = w
 
     def inclusion(self, clique):
         if self.set <= clique.set:
             if len(self.list)>1:
-                return 1 if is_sublist(self.list, clique.list+clique.list) else -1
+                return self.w if is_sublist(self.list, clique.list+clique.list) else -self.w
             else:
-                return 1 if self.list[0]==clique.list[len(clique.list)-1] else -1
+                return self.w if self.list[0]==clique.list[-1] else -self.w
         else:
             return 0
 
@@ -61,18 +62,22 @@ def cliques_by_dim(g, max_dim=None):
     N = len(g.vs)
     sorted_cliques = sorted(oriented_cliques, key=lambda x:len(x)+sum(x)/(N*len(x)))
     clqs = Cliques(len(cliques))
-    for _,cs in groupby(sorted_cliques, key=len):
-        clqs.append([Clique(c) for c in cs])
+    for dim,cs in groupby(sorted_cliques, key=len):
+        if dim == 2:
+            # edges can be weighted
+            clqs.append([Clique(c, np.sqrt(g[c[0],c[1]])) for c in cs])
+        else:
+            clqs.append([Clique(c) for c in cs])
     return clqs
 
 
-def dirac(clqs):
+def dirac(clqs, dtype=float):
     """
     Returns the Dirac matrix.
     """
     N = len(clqs)
     Nd = clqs.total_count
-    D = np.zeros((Nd,Nd), np.int8)
+    D = np.zeros((Nd,Nd), dtype=dtype)
     i_offset = 0
     for i,clqs_i in enumerate(clqs):
         i_size = len(clqs_i)
