@@ -52,7 +52,7 @@ def cliques_by_dim(g, max_dim=None):
         # orient 1-simplices/cliques according to edge direction (if available)
         # and leave everything else with its default ordering
         if len(c) == 2:
-            return (c[0], c[1]) if g.get_eid(c[0], c[1], error=False)==1 else (c[1],c[0])
+            return (c[0], c[1]) if g.get_eid(c[0], c[1], error=False) != -1 else (c[1],c[0])
         else:
             return c
 
