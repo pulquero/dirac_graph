@@ -141,6 +141,56 @@ def subspace(T, i, clqs, j=None):
         raise Exception('Unsupported arguments')
 
 
+class DifferentialOperators:
+    def __init__(self, clqs):
+        self.clqs = clqs
+        self._D = None
+        self._L = None
+        self._grad = None
+        self._div = None
+        self._curl = None
+        self._cocurl = None
+
+    @property
+    def D(self):
+        if self._D is None:
+            self._D = dirac(self.clqs)
+        return self._D
+
+    @property
+    def L(self):
+        if self._L is None:
+            self._L = self.D @ self.D
+        return self._L
+
+    def L_(self, i):
+        return subspace(self.L, i, self.clqs)
+
+    @property
+    def grad(self):
+        if self._grad is None:
+            self._grad = subspace(self.D, 1, self.clqs, j=0)
+        return self._grad
+
+    @property
+    def div(self):
+        if self._div is None:
+            self._div = subspace(self.D, 0, self.clqs, j=1)
+        return self._div
+
+    @property
+    def curl(self):
+        if self._curl is None:
+            self._curl = subspace(self.D, 2, self.clqs, j=1)
+        return self._curl
+
+    @property
+    def cocurl(self):
+        if self._cocurl is None:
+            self._cocurl = subspace(self.D, 1, self.clqs, j=2)
+        return self._cocurl
+
+
 def dirac_space(v, i, clqs):
     """
     Embeds \Omega_i into \Omega.
