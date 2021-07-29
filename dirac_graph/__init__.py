@@ -181,13 +181,19 @@ class DifferentialOperators:
     @property
     def curl(self):
         if self._curl is None:
-            self._curl = subspace(self.D, 2, self.clqs, j=1)
+            if len(self.clqs) > 2:
+                self._curl = subspace(self.D, 2, self.clqs, j=1)
+            else:
+                self._curl = np.zeros((0, self.clqs.dim(1)))
         return self._curl
 
     @property
     def cocurl(self):
         if self._cocurl is None:
-            self._cocurl = subspace(self.D, 1, self.clqs, j=2)
+            if len(self.clqs) > 2:
+                self._cocurl = subspace(self.D, 1, self.clqs, j=2)
+            else:
+                self._cocurl = np.zeros((self.clqs.dim(1), 0))
         return self._cocurl
 
 
