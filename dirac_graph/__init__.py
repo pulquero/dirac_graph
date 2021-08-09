@@ -5,20 +5,26 @@ Mark Hale
 Ref:
  - The Dirac operator of a graph, Oliver Knill (https://arxiv.org/abs/1306.2166)
 """
+from collections import UserList
 from itertools import groupby
 import numpy as np
 
 
-def is_sublist(l,ll):
+def find_sublist(l,ll):
     Nl = len(l)
     for i in range(0, len(ll)-Nl):
-        if l==ll[i:i+Nl]:
-            return True
-    return False
+        if l == ll[i:i+Nl]:
+            return i
+    return None
 
 
-class Cliques(list):
-    def __init__(self, total_count):
+class Cliques(UserList):
+    def __init__(self, data=None, total_count=None):
+        if data is None:
+            data = []
+        self.data = data
+        if total_count is None:
+            total_count = sum([len(c) for c in data])
         self.total_count = total_count
 
     def dim(self, i):
@@ -27,19 +33,34 @@ class Cliques(list):
 
 class Clique:
     def __init__(self, c, w=1):
-        self.list = c
+        self.list = c # actually an ordered tuple, not a list
         # store set for use in inclusion()
         self.set = frozenset(c)
-        self.w = w
+        self.w = w # weight
 
     def inclusion(self, clique):
-        if self.set <= clique.set:
-            if len(self.list)>1:
-                return self.w if is_sublist(self.list, clique.list+clique.list) else -self.w
+        if len(clique.list) == len(self.list) + 1 and self.set <= clique.set:
+            if len(clique.list) == 2:
+                return clique.w if self.list[0] == clique.list[1] else -clique.w
+            elif len(clique.list) == 3:
+                clq_cycle = clique.list + clique.list
+                idx = find_sublist(self.list, clq_cycle)
+                if idx is not None:
+                    return clique.w[idx]
+                else:
+                    idx = find_sublist(self.list[::-1], clq_cycle)
+                    return -clique.w[idx]
             else:
-                return self.w if self.list[0]==clique.list[-1] else -self.w
+                idx = find_sublist(self.list, clique.list + clique.list)
+                return clique.w if idx is not None else -clique.w
         else:
             return 0
+
+    def __str__(self):
+        return "{}, w={}".format(self.list, self.w)
+
+    def __repr__(self):
+        return "{}({}, {})".format(self.__class__.__name__, self.list, self.w)
 
 
 def cliques_by_dim(g, max_dim=None):
@@ -61,12 +82,26 @@ def cliques_by_dim(g, max_dim=None):
     # sort by dimension (and then by IDs)
     N = len(g.vs)
     sorted_cliques = sorted(oriented_cliques, key=lambda x:len(x)+sum(x)/(N*len(x)))
-    clqs = Cliques(len(cliques))
+    clqs = Cliques(total_count=len(cliques))
     for dim,cs in groupby(sorted_cliques, key=len):
-        if dim == 2:
-            # edges can be weighted
+        if dim == 1:
+            clqs.append([Clique(c) for c in cs])
+        elif dim == 2:
             clqs.append([Clique(c, np.sqrt(g[c[0],c[1]])) for c in cs])
+        elif dim == 3:
+            clq_objs = []
+            for c in cs:
+                ws = []
+                for i in range(len(c)):
+                    v1 = c[i]
+                    v2 = c[i+1] if i+1 < len(c) else c[0]
+                    w_e = g[v1,v2] if g[v1,v2] > 0 else g[v2,v1]
+                    ws.append(1/np.sqrt(w_e))
+                clq_objs.append(Clique(c, ws))
+            clqs.append(clq_objs)
         else:
+            if 'weight' in g.es:
+                raise Exception("Weights are only supported for cliques up to 3-dimensions")
             clqs.append([Clique(c) for c in cs])
     return clqs
 
