@@ -10,14 +10,6 @@ from itertools import groupby
 import numpy as np
 
 
-def find_sublist(l,ll):
-    Nl = len(l)
-    for i in range(0, len(ll)-Nl):
-        if l == ll[i:i+Nl]:
-            return i
-    return None
-
-
 class Cliques(UserList):
     def __init__(self, data=None, total_count=None):
         if data is None:
@@ -32,35 +24,43 @@ class Cliques(UserList):
 
 
 class Clique:
-    def __init__(self, c, w=1):
-        self.list = c # actually an ordered tuple, not a list
-        # store set for use in inclusion()
-        self.set = frozenset(c)
-        self.w = w # weight
+    def __init__(self, vs, ws=1):
+        n = len(vs)
+        self.vs = vs # vertices
+        # boundary table
+        self.b_table = [vs[:i] + vs[i+1:] for i in range(n)] if n > 1 else None
+        self.ws = ws # weights
 
     def inclusion(self, clique):
-        if len(clique.list) == len(self.list) + 1 and self.set <= clique.set:
-            if len(clique.list) == 2:
-                return clique.w if self.list[0] == clique.list[1] else -clique.w
-            elif len(clique.list) == 3:
-                clq_cycle = clique.list + clique.list
-                idx = find_sublist(self.list, clq_cycle)
-                if idx is not None:
-                    return clique.w[idx]
-                else:
-                    idx = find_sublist(self.list[::-1], clq_cycle)
-                    return -clique.w[idx]
-            else:
-                idx = find_sublist(self.list, clique.list + clique.list)
-                return clique.w if idx is not None else -clique.w
+        if len(clique.vs) == len(self.vs) + 1:
+            try:
+                idx = clique.b_table.index(self.vs)
+                flip = 1
+            except ValueError:
+                try:
+                    idx = clique.b_table.index(self.vs[::-1])
+                except ValueError:
+                    return 0
+                flip = -1
+            try:
+                w = clique.ws[idx]
+            except:
+                w = clique.ws
+            return flip * ((-1)**idx) * w
         else:
             return 0
 
+    def __getitem__(self, idx):
+        return self.vs[idx]
+
+    def __len__(self):
+        return len(self.vs)
+
     def __str__(self):
-        return "{}, w={}".format(self.list, self.w)
+        return "{}, ws={}".format(self.vs, self.ws)
 
     def __repr__(self):
-        return "{}({}, {})".format(self.__class__.__name__, self.list, self.w)
+        return "{}({}, {})".format(self.__class__.__name__, self.vs, self.ws)
 
 
 def cliques_by_dim(g, max_dim=None):
@@ -83,26 +83,21 @@ def cliques_by_dim(g, max_dim=None):
     N = len(g.vs)
     sorted_cliques = sorted(oriented_cliques, key=lambda x:len(x)+sum(x)/(N*len(x)))
     clqs = Cliques(total_count=len(cliques))
-    for dim,cs in groupby(sorted_cliques, key=len):
-        if dim == 1:
-            clqs.append([Clique(c) for c in cs])
-        elif dim == 2:
+    for dim, cs in groupby(sorted_cliques, key=len):
+        if dim == 2:
             clqs.append([Clique(c, np.sqrt(g[c[0],c[1]])) for c in cs])
-        elif dim == 3:
-            clq_objs = []
-            for c in cs:
-                ws = []
-                for i in range(len(c)):
-                    v1 = c[i]
-                    v2 = c[i+1] if i+1 < len(c) else c[0]
-                    w_e = g[v1,v2] if g[v1,v2] > 0 else g[v2,v1]
-                    ws.append(1/np.sqrt(w_e))
-                clq_objs.append(Clique(c, ws))
-            clqs.append(clq_objs)
         else:
-            if 'weight' in g.es:
-                raise Exception("Weights are only supported for cliques up to 3-dimensions")
-            clqs.append([Clique(c) for c in cs])
+            clq_objs = [Clique(c) for c in cs]
+            if dim == 3 and 'weight' in g.es.attribute_names():
+                for clq in clq_objs:
+                    ws = []
+                    for b in clq.b_table:
+                        v1 = b[0]
+                        v2 = b[1]
+                        w_e = g[v1,v2] if g[v1,v2] > 0 else g[v2,v1]
+                        ws.append(1/np.sqrt(w_e))
+                    clq.ws = ws
+            clqs.append(clq_objs)
     return clqs
 
 
@@ -289,7 +284,7 @@ def get_vertex_values(u, clqs):
     N_0 = clqs.dim(0)
     u_v = np.ndarray(N_0) # restriction of u to vertices
     for i,c in enumerate(clqs[0]):
-        u_v[c.list[0]] = u[i]
+        u_v[c[0]] = u[i]
     return u_v
 
 
@@ -299,7 +294,7 @@ def get_edge_values(u, clqs, g):
     u_e = np.ndarray(N_1) # restriction of u to edges
     offset = N_0 if len(u)==clqs.total_count else 0
     for i,c in enumerate(clqs[1]):
-        u_e[g.get_eid(c.list[0], c.list[1])] = u[i+offset]
+        u_e[g.get_eid(c[0], c[1])] = u[i+offset]
     return u_e
 
 
@@ -308,5 +303,5 @@ def get_2form_values(u, clqs):
     N_1 = clqs.dim(1)
     u_2 = {}
     for i,c in enumerate(clqs[2]):
-        u_2[c.list] = u[i+N_0+N_1]
+        u_2[c] = u[i+N_0+N_1]
     return u_2
