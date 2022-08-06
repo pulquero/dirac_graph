@@ -205,7 +205,7 @@ class DifferentialOperators:
     @property
     def div(self):
         if self._div is None:
-            self._div = subspace(self.D, 0, self.clqs, j=1)
+            self._div = -subspace(self.D, 0, self.clqs, j=1)
         return self._div
 
     @property
