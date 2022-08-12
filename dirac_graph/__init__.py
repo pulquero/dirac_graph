@@ -63,7 +63,7 @@ class Clique:
         return "{}({}, {})".format(self.__class__.__name__, self.vs, self.ws)
 
 
-def cliques_by_dim(g, max_dim=None):
+def cliques_by_dim(g, max_dim=None) -> Cliques:
     """
     Return the cliques/simplices of a graph in a list, indexed by dimension.
     Each list entry is a list of Clique objects of the same dimension.
@@ -80,13 +80,14 @@ def cliques_by_dim(g, max_dim=None):
 
     oriented_cliques = [orient_clique(c) for c in cliques]
     # sort by dimension (and then by IDs)
-    N = len(g.vs)
-    sorted_cliques = sorted(oriented_cliques, key=lambda x:len(x)+sum(x)/(N*len(x)))
+    sorted_cliques = sorted(oriented_cliques, key=len)
     clqs = Cliques(total_count=len(cliques))
     for dim, cs in groupby(sorted_cliques, key=len):
         if dim == 2:
+            cs = sorted(cs, key=sum)
             clqs.append([Clique(c, np.sqrt(g[c[0],c[1]])) for c in cs])
         else:
+            cs = sorted(cs, key=sum)
             clq_objs = [Clique(c) for c in cs]
             if dim == 3 and 'weight' in g.es.attribute_names():
                 for clq in clq_objs:
@@ -101,7 +102,7 @@ def cliques_by_dim(g, max_dim=None):
     return clqs
 
 
-def dirac(clqs, dtype=float):
+def dirac(clqs: Cliques, dtype=float):
     """
     Returns the Dirac matrix.
     """
@@ -136,7 +137,7 @@ def adjoint_d(D):
     return np.triu(D)
 
 
-def gamma(clqs):
+def gamma(clqs: Cliques):
     """
     Returns the Z_2 grading.
     """
@@ -151,7 +152,7 @@ def gamma(clqs):
     return g
 
 
-def subspace(T, i, clqs, j=None):
+def subspace(T, i, clqs: Cliques, j=None):
     """
     If T is a matrix,
     projects out T_ij : \Omega_i -> \Omega_j from T : \Omega -> \Omega
@@ -172,7 +173,7 @@ def subspace(T, i, clqs, j=None):
 
 
 class DifferentialOperators:
-    def __init__(self, clqs):
+    def __init__(self, clqs: Cliques):
         self.clqs = clqs
         self._D = None
         self._L = None
@@ -227,7 +228,7 @@ class DifferentialOperators:
         return self._cocurl
 
 
-def dirac_space(v, i, clqs):
+def dirac_space(v, i, clqs: Cliques):
     """
     Embeds \Omega_i into \Omega.
     """
@@ -280,7 +281,7 @@ def remove_kernel(u, evec_zeros):
     return u
 
 
-def get_vertex_values(u, clqs):
+def get_vertex_values(u, clqs: Cliques):
     N_0 = clqs.dim(0)
     u_v = np.ndarray(N_0) # restriction of u to vertices
     for i,c in enumerate(clqs[0]):
@@ -288,7 +289,7 @@ def get_vertex_values(u, clqs):
     return u_v
 
 
-def get_edge_values(u, clqs, g):
+def get_edge_values(u, clqs: Cliques, g):
     N_0 = clqs.dim(0)
     N_1 = clqs.dim(1)
     u_e = np.ndarray(N_1) # restriction of u to edges
@@ -298,7 +299,7 @@ def get_edge_values(u, clqs, g):
     return u_e
 
 
-def get_2form_values(u, clqs):
+def get_2form_values(u, clqs: Cliques):
     N_0 = clqs.dim(0)
     N_1 = clqs.dim(1)
     u_2 = {}

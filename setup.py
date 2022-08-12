@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="dirac_graph",
-    version="1.3.4",
+    version="1.3.5",
     author="Mark Hale",
     license="MIT",
     description="Computational spectral geometry on finite graphs",
